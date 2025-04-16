@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-image: url('img/1.jpg');
+            background-size: cover;
+            background-position: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            display: block;
+            margin: 10px auto;
+            padding: 10px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #preview img {
+            margin: 10px;
+            width: 100px;
+            height: auto;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        #fileList a {
+            display: block;
+            margin: 5px 0;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        #fileList a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Upload Your Files</h2>
+        <input type="file" id="fileInput" multiple />
+        <button id="uploadButton">Upload</button>
+        <h2>Preview of Selected Files</h2>
+        <div id="preview"></div>
+        <h2>View Uploaded Files</h2>
+        <button id="viewFilesButton">View Files</button>
+        <div id="fileList"></div>
+    </div>
+
+    <script>
+        // Preview images before upload
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const previewContainer = document.getElementById('preview');
+            previewContainer.innerHTML = ''; // Clear previous previews
+
+            const files = this.files;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                // Check if the file is an image
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        previewContainer.appendChild(img);
+                    };
+
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Function to upload files
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            const files = document.getElementById('fileInput').files;
+            const formData = new FormData();
+
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files[]', files[i]);
+            }
+
+            fetch('/upload', { // Ensure this URL is correct for your server
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {alert('Files uploaded successfully!');
+                document.getElementById('fileInput').value = ''; // Clear the file input
+                document.getElementById('preview').innerHTML = ''; // Clear the preview
+                loadUploadedFiles();  // Reload the list after uploading
+            })
+            .catch(error => console.error('Error uploading files:', error));
+        });
+
+        // Function to view previously uploaded files
+        document.getElementById('viewFilesButton').addEventListener('click', () => {
+            fetch('/files')  // Ensure this URL is correct for your server
+                .then(response => response.json())
+                .then(files => {
+                    const fileList = document.getElementById('fileList');
+                    fileList.innerHTML = '';
+
+                    files.forEach(file => {
+                        const fileName = file.split('/').pop();
+
+                        // Create link for file
+                        const link = document.createElement('a');
+                        link.href = file;
+                        link.target = '_blank';
+                        link.textContent = fileName;
+
+                        // Create rename button
+                        const renameButton = document.createElement('button');
+                        renameButton.textContent = 'Rename';
+                        renameButton.onclick = () => renameFile(fileName);
+                        renameButton.style.fontSize = '12px'; // Smaller text size
+                        renameButton.style.padding = '5px 10px'; // Smaller padding
+                        renameButton.style.fontWeight = 'normal'; // Optional: Adjust font weight
+
+                        // Create delete button
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.onclick = () => deleteFile(fileName);
+                        deleteButton.style.fontSize = '12px'; // Smaller text size
+                        deleteButton.style.padding = '5px 10px'; // Smaller padding
+                        deleteButton.style.fontWeight = 'normal'; // Optional: Adjust font weight
+
+                        // Add to wrapper
+                       // Create a div to hold the file name and buttons
+const fileWrapper = document.createElement('div');
+fileWrapper.style.display = 'flex'; // Use flexbox to align items horizontally
+fileWrapper.style.justifyContent = 'space-between'; // Push the buttons to the right and give space between them
+fileWrapper.style.alignItems = 'center'; // Vertically align the content
+
+// Add the file link to the wrapper
+fileWrapper.appendChild(link);
+
+// Create a container for the buttons
+const buttonWrapper = document.createElement('div');
+buttonWrapper.style.display = 'flex'; // Use flexbox for buttons
+buttonWrapper.style.gap = '10px'; // Space between the buttons (adjust as needed)
+
+// Add buttons to the container
+buttonWrapper.appendChild(renameButton);
+buttonWrapper.appendChild(deleteButton);
+
+// Append the button container to the file wrapper
+fileWrapper.appendChild(buttonWrapper);
+
+// Finally, add the fileWrapper to the file list
+fileList.appendChild(fileWrapper);
+                    });
+                })
+                .catch(error => console.error('Error loading files:', error));
+        });
+
+        // Function to rename file
+        function renameFile(oldName) {
+            const newName = prompt("Enter new name for the file", oldName);
+            if (newName) {
+                fetch('/rename', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ oldName, newName })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('File renamed successfully');
+                        loadUploadedFiles(); // Reload the list after renaming
+                    } else {
+                        response.text().then(text => alert(`Error: ${text}`));
+                    }
+                })
+                .catch(error => console.error('Error renaming file:', error));
+            }
+        }
+
+        // Function to delete file
+        function deleteFile(fileName) {
+            if (confirm('Are you sure you want to delete this file?')) {
+                fetch('/delete', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fileName })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('File deleted successfully');
+                        loadUploadedFiles(); // Reload the list after deleting
+                    } else {
+                        response.text().then(text => alert(`Error: ${text}`));
+                    }
+                })
+                .catch(error => console.error('Error deleting file:', error));
+            }
+        }// Function to load uploaded files (on page load)
+        function loadUploadedFiles() {
+            fetch('/files') // Ensure this URL is correct for your server
+                .then(response => response.json())
+                .then(files => {
+                    const fileList = document.getElementById('fileList');
+                    fileList.innerHTML = '';
+
+                    files.forEach(file => {
+                        const fileName = file.split('/').pop();
+                        const link = document.createElement('a');
+                        link.href = file;
+                        link.target = '_blank';
+                        link.textContent = fileName;
+                        fileList.appendChild(link);
+                    });
+                })
+                .catch(error => console.error('Error loading files:', error));
+        }
+
+        // Load files when the page loads
+        window.onload = loadUploadedFiles;
+    </script>
+
+</body>
+</html>
